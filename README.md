@@ -2,15 +2,30 @@
 ## OpenWrt 25.12.2 · WireGuard · ProtonVPN · Travelmate
 
 > These instructions were written and tested on a GL-iNet Beryl AX (MT3000) running OpenWrt 25.12.2. They should work on any OpenWrt router with two WiFi radios.
+>
+> **Radio assignment varies by device.** This guide uses radio0 as 2.4 GHz and radio1 as 5 GHz — correct for the MT3000, but some routers reverse this. Before Step 7, verify yours with `uci show wireless | grep -E 'radio[0-9]\.band'`. If they are reversed, swap every mention of radio0 and radio1 in this guide.
 
 ### What This Does
 
 Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or ethernet) as its upstream WAN connection, and broadcasts your own private WiFi for your devices. All traffic is routed through ProtonVPN via WireGuard. Your devices are firewalled and NAT'd behind the router.
 
-- **radio0** (2.4 GHz) = wireless WAN — connects to hotel WiFi, managed by Travelmate. 2.4 GHz is used for upstream because it has better range and wall penetration, which matters when the hotel access point is far away.
-- **radio1** (5 GHz) = your private WiFi — your devices connect here. 5 GHz is used for your private network because your devices are close to the router, and 5 GHz is faster and less congested than 2.4 GHz in environments with many competing networks.
+- **radio0** (2.4 GHz on MT3000) = wireless WAN — connects to hotel WiFi, managed by Travelmate. 2.4 GHz is used for upstream because it has better range and wall penetration, which matters when the hotel access point is far away.
+- **radio1** (5 GHz on MT3000) = your private WiFi — your devices connect here. 5 GHz is used for your private network because your devices are close to the router, and 5 GHz is faster and less congested than 2.4 GHz in environments with many competing networks.
 - **WAN port** = wired WAN — upstream internet connection (ethernet)
 - **LAN port** = wired LAN — connect your laptop for setup
+
+---
+
+### Why bother with this instead of just using a VPN app?
+
+A VPN app on your phone protects your phone. This setup protects everything — your phone, laptop, tablet, smart TV, work laptop, your friends' or family's devices — any device that connects to your private WiFi is automatically behind the VPN with no configuration needed on the device itself.
+
+There are also things a VPN app can't do:
+
+- **Devices that can't run a VPN** — smart TVs, games consoles, IoT devices, and work laptops where you can't install software all get full VPN protection automatically
+- **Full isolation from the hotel network** — with a VPN app your device still connects directly to hotel WiFi and is exposed to other devices on that network. With this setup your devices never touch the hotel network at all — they connect to your private router, which handles everything
+- **Firewall and NAT** — your devices are hidden behind the router. Other devices on the hotel network can't see or reach them
+- **One setup, works everywhere** — add the hotel WiFi once, Travelmate and the VPN handle the rest automatically on every future visit. No remembering to turn the VPN on
 
 ---
 
@@ -51,7 +66,7 @@ On your computer, set the ethernet interface to a **manual/static IP**:
 | Subnet Mask | `255.255.255.0` |
 | Router/Gateway | `192.168.1.1` |
 
-> **Why manual?** The router's WiFi radios are disabled on a fresh OpenWrt install, so it cannot serve DHCP reliably over ethernet until configured. Manual IP guarantees you can reach it.
+> **Why manual?** We're about to change the router's LAN IP in Step 4. If you used DHCP and got a lease on 192.168.1.x, you'd lose connectivity the moment the IP changes. A manual IP in the same range keeps you connected throughout the initial setup without depending on DHCP lease timing.
 
 **On Mac:** System Settings → Network → your ethernet interface → Details → TCP/IP → Configure IPv4: Manually
 
@@ -255,7 +270,7 @@ uci commit network
 /etc/init.d/network restart
 ```
 
-This makes wg0 (VPN) the preferred default route (lower metric = higher priority), while wwan remains as fallback if the VPN drops.
+This makes wg0 (VPN) the preferred default route (lower metric = higher priority), while the upstream connection (wwan, or later trm_wwan once Travelmate is set up) remains as fallback if the VPN drops.
 
 > **Note:** The network restart may cause your SSH connection to drop. If the terminal hangs or disconnects, wait 15–20 seconds then reconnect with `ssh root@10.20.30.1`. This is normal.
 
