@@ -7,7 +7,7 @@ Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or eth
 
 - **radio0** (2.4 GHz) = wireless WAN — connects to hotel WiFi, managed by Travelmate
 - **radio1** (5 GHz) = your private WiFi — your devices connect here
-- **WAN port** = wired WAN — plug in hotel ethernet cable
+- **WAN port** = wired WAN — upstream internet connection (ethernet)
 - **LAN port** = wired LAN — connect your laptop for setup
 
 ---
@@ -81,9 +81,6 @@ uci set network.wwan.peerdns='0'
 uci set network.wwan.metric='100'
 uci commit network
 ```
-
-> **Note:** Do not set `network.lan.dns` — it is not a valid option for a static LAN interface and causes network boot failures.
-> Do not set `network.wwan.type='bridge'` — WiFi client interfaces cannot be bridged and this will prevent the interface from working.
 
 ### Step 6 — Add wwan to the WAN firewall zone
 
@@ -186,7 +183,7 @@ PersistentKeepalive = 25
 
 ### Step 14 — Install WireGuard packages
 
-The router needs internet access for this step. Connect the hotel/home ethernet cable to the WAN port if you have not already.
+The router needs internet access for this step. Connect your home broadband to the WAN port if you have not already.
 
 Go to **System → Software** in LuCI (`https://10.20.30.1`):
 1. Click **Update lists**
@@ -260,6 +257,8 @@ Travelmate manages upstream WiFi connections automatically. You add networks onc
 
 ### Step 21 — Install Travelmate
 
+The router needs internet access for this step — your home broadband should already be connected to the WAN port from Step 14.
+
 Go to **System → Software** in LuCI:
 1. Click **Update lists**
 2. Search for and install: `travelmate`
@@ -331,9 +330,9 @@ Go to **Services → Travelmate → Wireless Stations**:
 Wait 30–60 seconds. The status on the Overview tab should show `connected, net ok`.
 
 > **Encryption tip:**
-> - Hotel gave you a password → **WPA2-PSK**
+> - Network has a password → **WPA2-PSK**
 > - No password, just a login page (captive portal) → **None**
-> - WPA3 is rare but some newer hotels use it
+> - WPA3 is supported but less common
 
 ### Step 27 — Verify everything works
 
@@ -384,7 +383,7 @@ Next time you visit the same hotel, Travelmate connects automatically with no in
 | Router admin (LuCI) | `https://10.20.30.1` |
 | SSH | `ssh root@10.20.30.1` |
 | LAN port | ethernet (your devices / setup) |
-| WAN port | ethernet (hotel wired connection) |
+| WAN port | ethernet (upstream internet connection) |
 | radio0 | 2.4 GHz — upstream client (managed by Travelmate) |
 | radio1 | 5 GHz — your private AP |
 
