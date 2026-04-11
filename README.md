@@ -21,7 +21,19 @@ This guide assumes OpenWrt is already installed on your router. If you haven't d
 You will need:
 - An ethernet cable
 - A computer with an ethernet port (or USB-ethernet adapter)
-- A ProtonVPN account (you'll generate the WireGuard config file in Step 13)
+- A ProtonVPN WireGuard config file — generate and download this before you start:
+  1. Log in at `account.proton.me`
+  2. Click **VPN** in the top menu
+  3. Select **WireGuard** from the side menu
+  4. Give the config a name (e.g. `openwrt`)
+  5. Set **Platform** to **Router**
+  6. Select your VPN options:
+     - **NetShield** — DNS-based blocker. Choose *Block malware, ads & trackers* for the most protection, or *Block malware only* for a lighter option. Off if you prefer to handle this elsewhere.
+     - **VPN Accelerator** — ProtonVPN's speed optimisation. Leave on.
+     - **Moderate NAT** — Shares your VPN IP with other users for better privacy. Leave on unless you have a specific reason to turn it off.
+     - **NAT-PMP (Port Forwarding)** — Allows incoming connections through the VPN. Leave off unless you need it.
+  7. Under **Select a server**, choose **Standard server configs**, pick a server, and click **Create**
+  8. Download the `.conf` file to your computer
 
 ---
 
@@ -50,6 +62,8 @@ On your computer, set the ethernet interface to a **manual/static IP**:
 ### Step 2 — Set root password *(browser)*
 
 Open a browser and go to `http://192.168.1.1`
+
+You may be redirected to `https://` and shown a certificate warning. This is expected — the router uses a self-signed certificate. Proceed past the warning (on Chrome: click **Advanced → Proceed**; on Firefox: click **Accept the Risk and Continue**).
 
 You will be prompted to set a root password. Set a strong password and note it down.
 
@@ -113,6 +127,8 @@ uci commit wireless
 
 Replace `MyTravelWiFi` and `YourPassword` with your chosen SSID and password. Password must be at least 8 characters.
 
+> **Note:** These commands use `default_radio1` which is the standard name on most OpenWrt routers. If they fail, verify the correct name by running `uci show wireless` and looking for the `wifi-iface` entry that references `radio1` — the name before `.ssid` is what you need (e.g. `wireless.default_radio1.ssid` → `default_radio1`).
+
 ```bash
 uci set wireless.default_radio1.ssid='MyTravelWiFi'
 uci set wireless.default_radio1.encryption='psk2'
@@ -125,7 +141,7 @@ uci commit wireless
 
 ### Step 9 — Disable DNS rebind protection *(terminal)*
 
-This is required for captive portal (hotel login page) handling to work correctly.
+Hotel login pages work by redirecting your DNS queries to the router's own IP address. DNS rebind protection blocks this as a security measure, which prevents the login page from loading. Disabling it allows captive portals to function correctly.
 
 ```bash
 uci set dhcp.@dnsmasq[0].rebind_protection='0'
@@ -146,7 +162,7 @@ Wait approximately 2 minutes for the router to reboot.
 
 ### Step 11 — Update your ethernet IP
 
-The router's LAN IP is now `10.20.30.1`. Update your computer's ethernet settings:
+The router's LAN IP is now `10.20.30.1`. Update your computer's ethernet settings using the same method as Step 1, with these new values:
 
 | Setting | Value |
 |---|---|
@@ -168,18 +184,9 @@ You should also be able to see your private WiFi SSID (e.g. `MyTravelWiFi`) broa
 
 ## Part 4: WireGuard VPN Setup (ProtonVPN)
 
-### Step 13 — Get your WireGuard config file *(browser)*
+### Step 13 — Locate your WireGuard config file
 
-1. Log in at `account.proton.me`
-2. Click **VPN** in the top menu
-3. Select **WireGuard** from the side menu
-4. Give the config a name (e.g. `openwrt`)
-5. Set **Platform** to **Router**
-6. Select your VPN options
-7. Under **Select a server**, choose **Standard server configs**, pick a server, and click **Create**
-8. Download the `.conf` file
-
-The file will look like this:
+You should have downloaded this in **Before You Start**. The file will look like this:
 
 ```ini
 [Interface]
@@ -221,9 +228,17 @@ On the **General Settings** tab, click **Import configuration** and load your `.
 
 ### Step 16 — Add the VPN peer *(browser)*
 
-Click the **Peers** tab. Your peer should have been imported. Click **Edit** on it and make sure **Route Allowed IPs** is checked. Click **Save**.
+Click the **Peers** tab. Your peer should have been imported. Click **Edit** on it and make sure **Route Allowed IPs** is checked — this tells the router to send all traffic through the VPN tunnel. Without it the VPN will connect but no traffic will route through it. Click **Save**.
 
 Click **Save & Apply**.
+
+> **If no peer appears:** Click **Add peer** and enter the following values manually from your `.conf` file:
+> - **Public Key** = value of `PublicKey` from the `[Peer]` section
+> - **Allowed IPs** = `0.0.0.0/0, ::/0`
+> - **Endpoint Host** = IP address part of `Endpoint` (e.g. `1.2.3.4`)
+> - **Endpoint Port** = port part of `Endpoint` (e.g. `51820`)
+> - **Route Allowed IPs** = checked
+> - **Persistent Keep Alive** = `25`
 
 ### Step 17 — Add wg0 to the WAN firewall zone *(browser)*
 
@@ -241,6 +256,8 @@ uci commit network
 ```
 
 This makes wg0 (VPN) the preferred default route (lower metric = higher priority), while wwan remains as fallback if the VPN drops.
+
+> **Note:** The network restart may cause your SSH connection to drop. If the terminal hangs or disconnects, wait 15–20 seconds then reconnect with `ssh root@10.20.30.1`. This is normal.
 
 ### Step 19 — Set DNS servers *(browser)*
 
@@ -265,6 +282,8 @@ Go to `https://10.20.30.1` → **Status → WireGuard** — the peer should show
 ## Part 5: Travelmate Setup
 
 Travelmate manages upstream WiFi connections automatically. You add networks once and it connects to them automatically whenever they are in range.
+
+In the base setup (Steps 5–6) you created a `wwan` interface. Travelmate works differently — it creates and manages its own interface called `trm_wwan`. Once Travelmate is running, `trm_wwan` is the active upstream WiFi interface. The `wwan` interface remains in the config as a harmless fallback but is not actively used.
 
 > **Important:** Travelmate takes over radio0 as the upstream WiFi manager. Do not manually configure wireless client interfaces on radio0 — let Travelmate manage it.
 
@@ -344,9 +363,11 @@ Go to **Services → Travelmate → Wireless Stations**:
 
 Wait 30–60 seconds. The status on the Overview tab should show `connected, net ok`.
 
+> **Captive portal?** If the network requires a browser login (common in hotels), see the captive portal note in the **Ongoing Use** section below.
+
 > **Encryption tip:**
 > - Network has a password → **WPA2-PSK**
-> - No password, just a login page (captive portal) → **None**
+> - No password, just a login page (captive portal) → **None**. The WiFi itself is open — you connect without a password and then complete the login by opening a browser (see the captive portal note in the Ongoing Use section).
 > - WPA3 is supported but less common
 
 ### Step 27 — Verify everything works *(browser)*
@@ -378,7 +399,7 @@ Next time you visit the same hotel, Travelmate connects automatically with no in
 
 ## Switching to a Different ProtonVPN Server
 
-1. Download a new `.conf` file from `account.proton.me` → VPN → WireGuard → Standard server configs
+1. Generate a new `.conf` file following the same steps as **Before You Start**, then download it
 2. Go to **Network → Interfaces → Edit wg0**
 3. **Peers tab** → click **Delete** on the existing peer
 4. Click **Import configuration as peer...** and load the new `.conf` file
@@ -477,7 +498,7 @@ Endpoint = 1.2.3.4:51820
 
 Follow Steps 13–20 as written, with these differences:
 
-- **Step 13:** Download your config from Mullvad instead of ProtonVPN
+- **Step 13 / Before You Start:** Follow the same preparation steps but download your config from Mullvad instead of ProtonVPN
 - **Step 19 (DNS):** Mullvad's DNS is `10.64.0.1`. You can use this instead of Quad9/Cloudflare, or keep Quad9/Cloudflare if you prefer not to use the provider's DNS
 
 Everything else — interface creation, firewall zone, metrics, Travelmate — is identical.
