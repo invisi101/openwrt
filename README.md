@@ -7,8 +7,8 @@
 
 Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or ethernet) as its upstream WAN connection, and broadcasts your own private WiFi for your devices. All traffic is routed through ProtonVPN via WireGuard. Your devices are firewalled and NAT'd behind the router.
 
-- **radio0** (2.4 GHz) = wireless WAN — connects to hotel WiFi, managed by Travelmate
-- **radio1** (5 GHz) = your private WiFi — your devices connect here
+- **radio0** (2.4 GHz) = wireless WAN — connects to hotel WiFi, managed by Travelmate. 2.4 GHz is used for upstream because it has better range and wall penetration, which matters when the hotel access point is far away.
+- **radio1** (5 GHz) = your private WiFi — your devices connect here. 5 GHz is used for your private network because your devices are close to the router, and 5 GHz is faster and less congested than 2.4 GHz in environments with many competing networks.
 - **WAN port** = wired WAN — upstream internet connection (ethernet)
 - **LAN port** = wired LAN — connect your laptop for setup
 
@@ -45,13 +45,15 @@ On your computer, set the ethernet interface to a **manual/static IP**:
 
 **On Windows:** Settings → Network & Internet → your ethernet adapter → Edit → Manual → enter the values above
 
-### Step 2 — Set root password
+**On Linux (NetworkManager):** `nmcli con mod "Wired connection 1" ipv4.method manual ipv4.addresses 192.168.1.2/24 ipv4.gateway 192.168.1.1 && nmcli con up "Wired connection 1"` — replace `"Wired connection 1"` with your actual connection name (`nmcli con show` to list them)
+
+### Step 2 — Set root password *(browser)*
 
 Open a browser and go to `http://192.168.1.1`
 
 You will be prompted to set a root password. Set a strong password and note it down.
 
-### Step 3 — SSH in
+### Step 3 — SSH in *(terminal)*
 
 Open a terminal and connect:
 
@@ -67,7 +69,7 @@ Accept the host key fingerprint when prompted. Enter your root password.
 
 Run each of the following commands in order. All commands must be run as root via SSH.
 
-### Step 4 — Change LAN IP
+### Step 4 — Change LAN IP *(terminal)*
 
 This avoids IP conflicts with common router defaults and hotel networks, which typically use 192.168.1.x.
 
@@ -78,7 +80,7 @@ uci commit network
 
 > **Important:** Include the `/24` suffix — without it the router loses its subnet mask and becomes unreachable after reboot.
 
-### Step 5 — Create the wireless WAN network interface
+### Step 5 — Create the wireless WAN network interface *(terminal)*
 
 ```bash
 uci set network.wwan='interface'
@@ -88,14 +90,14 @@ uci set network.wwan.metric='100'
 uci commit network
 ```
 
-### Step 6 — Add wwan to the WAN firewall zone
+### Step 6 — Add wwan to the WAN firewall zone *(terminal)*
 
 ```bash
 uci add_list firewall.@zone[1].network='wwan'
 uci commit firewall
 ```
 
-### Step 7 — Enable WiFi radios and set country code
+### Step 7 — Enable WiFi radios and set country code *(terminal)*
 
 ```bash
 uci set wireless.radio0.disabled='0'
@@ -107,7 +109,7 @@ uci commit wireless
 
 > Replace `GB` with your country code if needed (US, JP, DE, etc.)
 
-### Step 8 — Set up your private WiFi on radio1
+### Step 8 — Set up your private WiFi on radio1 *(terminal)*
 
 Replace `MyTravelWiFi` and `YourPassword` with your chosen SSID and password. Password must be at least 8 characters.
 
@@ -121,7 +123,7 @@ uci commit wireless
 
 > **Important:** The `disabled='0'` line is required — the AP interface is disabled by default on a fresh install and must be explicitly enabled.
 
-### Step 9 — Disable DNS rebind protection
+### Step 9 — Disable DNS rebind protection *(terminal)*
 
 This is required for captive portal (hotel login page) handling to work correctly.
 
@@ -130,7 +132,7 @@ uci set dhcp.@dnsmasq[0].rebind_protection='0'
 uci commit dhcp
 ```
 
-### Step 10 — Reboot
+### Step 10 — Reboot *(terminal)*
 
 ```bash
 reboot
@@ -152,7 +154,7 @@ The router's LAN IP is now `10.20.30.1`. Update your computer's ethernet setting
 | Subnet Mask | `255.255.255.0` |
 | Router/Gateway | `10.20.30.1` |
 
-### Step 12 — Verify SSH works
+### Step 12 — Verify SSH works *(terminal)*
 
 ```bash
 ssh root@10.20.30.1
@@ -166,11 +168,16 @@ You should also be able to see your private WiFi SSID (e.g. `MyTravelWiFi`) broa
 
 ## Part 4: WireGuard VPN Setup (ProtonVPN)
 
-### Step 13 — Get your WireGuard config file
+### Step 13 — Get your WireGuard config file *(browser)*
 
 1. Log in at `account.proton.me`
-2. Go to **Downloads → WireGuard configuration**
-3. Select a server and download the `.conf` file
+2. Click **VPN** in the top menu
+3. Select **WireGuard** from the side menu
+4. Give the config a name (e.g. `openwrt`)
+5. Set **Platform** to **Router**
+6. Select your VPN options
+7. Under **Select a server**, choose **Standard server configs**, pick a server, and click **Create**
+8. Download the `.conf` file
 
 The file will look like this:
 
@@ -187,7 +194,7 @@ Endpoint = 1.2.3.4:51820
 PersistentKeepalive = 25
 ```
 
-### Step 14 — Install WireGuard packages
+### Step 14 — Install WireGuard packages *(browser)*
 
 The router needs internet access for this step. Connect your home broadband to the WAN port if you have not already.
 
@@ -199,7 +206,7 @@ Go to **System → Software** in LuCI (`https://10.20.30.1`):
 
 Once the router reboots, reconnect to LuCI at `https://10.20.30.1` and continue.
 
-### Step 15 — Create the WireGuard interface
+### Step 15 — Create the WireGuard interface *(browser)*
 
 Go to **Network → Interfaces → Add new interface**:
 
@@ -212,17 +219,17 @@ Click **Create interface**.
 
 On the **General Settings** tab, click **Import configuration** and load your `.conf` file. This fills in the Private Key and IP Addresses automatically.
 
-### Step 16 — Add the VPN peer
+### Step 16 — Add the VPN peer *(browser)*
 
 Click the **Peers** tab. Your peer should have been imported. Click **Edit** on it and make sure **Route Allowed IPs** is checked. Click **Save**.
 
 Click **Save & Apply**.
 
-### Step 17 — Add wg0 to the WAN firewall zone
+### Step 17 — Add wg0 to the WAN firewall zone *(browser)*
 
 Go to **Network → Firewall → Zones** → click **Edit** on the `wan` zone → add `wg0` to **Covered networks** → **Save & Apply**.
 
-### Step 18 — Set routing metrics so all traffic goes through VPN
+### Step 18 — Set routing metrics so all traffic goes through VPN *(terminal)*
 
 Via SSH:
 
@@ -235,7 +242,7 @@ uci commit network
 
 This makes wg0 (VPN) the preferred default route (lower metric = higher priority), while wwan remains as fallback if the VPN drops.
 
-### Step 19 — Set DNS servers
+### Step 19 — Set DNS servers *(browser)*
 
 Go to **Network → Interfaces → Edit wwan → Advanced Settings tab**:
 
@@ -247,7 +254,7 @@ Go to **Network → Interfaces → Edit wwan → Advanced Settings tab**:
 
 Click **Save & Apply**.
 
-### Step 20 — Verify VPN is working
+### Step 20 — Verify VPN is working *(browser)*
 
 Go to `https://whatismyip.com` from a device connected to your private WiFi. It should show your ProtonVPN server's IP address, not your real IP.
 
@@ -263,7 +270,7 @@ Travelmate manages upstream WiFi connections automatically. You add networks onc
 
 > **Full documentation:** [Travelmate README on GitHub](https://github.com/openwrt/packages/blob/961b94904a08b424d7fdd2831c587b5b06b6b3ee/net/travelmate/files/README.md)
 
-### Step 21 — Install Travelmate
+### Step 21 — Install Travelmate *(browser)*
 
 The router needs internet access for this step — your home broadband should already be connected to the WAN port from Step 14.
 
@@ -275,7 +282,7 @@ Go to **System → Software** in LuCI:
 
 Once the router reboots, reconnect to LuCI at `https://10.20.30.1` and continue.
 
-### Step 22 — Run the Interface Wizard
+### Step 22 — Run the Interface Wizard *(browser)*
 
 Go to **Services → Travelmate**
 
@@ -291,7 +298,7 @@ These are all greyed out — do not change them. Click **Save**.
 
 > **If you see "The interface already exists"**: This means a `wwan`-related interface already exists from a previous setup attempt. See the troubleshooting section.
 
-### Step 23 — Add trm_wwan to the WAN firewall zone
+### Step 23 — Add trm_wwan to the WAN firewall zone *(terminal)*
 
 The wizard may not add `trm_wwan` to the firewall automatically. Do this via SSH:
 
@@ -301,7 +308,7 @@ uci commit firewall
 reload_config
 ```
 
-### Step 24 — Configure Travelmate
+### Step 24 — Configure Travelmate *(browser)*
 
 Go to **Services → Travelmate → General Settings**:
 
@@ -311,13 +318,13 @@ Go to **Services → Travelmate → General Settings**:
 | WWAN Interface | `trm_wwan` |
 | Radio Selection | `radio0` |
 | Captive Portal Detection | ✔ checked |
-| VPN processing | ✘ unchecked (known bug — leave off) |
+| VPN processing | ✘ unchecked |
 | ProActive Uplink Switch | ✔ checked (switches to higher priority network when available) |
 | LAN Interface (Additional Settings tab) | `lan` |
 
 Click **Save & Restart**.
 
-### Step 25 — Enable Travelmate autostart
+### Step 25 — Enable Travelmate autostart *(terminal)*
 
 The "Enabled" checkbox in Step 24 controls whether Travelmate is active, but does not make it start automatically on boot. Run this via SSH to enable autostart:
 
@@ -325,12 +332,12 @@ The "Enabled" checkbox in Step 24 controls whether Travelmate is active, but doe
 /etc/init.d/travelmate enable
 ```
 
-### Step 26 — Add your first upstream WiFi network
+### Step 26 — Add your first upstream WiFi network *(browser)*
 
 Go to **Services → Travelmate → Wireless Stations**:
 
 1. Click **Scan on radio0**
-2. Find your network in the list
+2. Find your home WiFi network in the list
 3. Click **Add Uplink...**
 4. Enter the WiFi password
 5. Click **Save & Apply**
@@ -342,7 +349,7 @@ Wait 30–60 seconds. The status on the Overview tab should show `connected, net
 > - No password, just a login page (captive portal) → **None**
 > - WPA3 is supported but less common
 
-### Step 27 — Verify everything works
+### Step 27 — Verify everything works *(browser)*
 
 Check that devices connected to your private WiFi have internet access.
 
@@ -371,7 +378,7 @@ Next time you visit the same hotel, Travelmate connects automatically with no in
 
 ## Switching to a Different ProtonVPN Server
 
-1. Download a new `.conf` file from `account.proton.me` → Downloads → WireGuard configuration
+1. Download a new `.conf` file from `account.proton.me` → VPN → WireGuard → Standard server configs
 2. Go to **Network → Interfaces → Edit wg0**
 3. **Peers tab** → click **Delete** on the existing peer
 4. Click **Import configuration as peer...** and load the new `.conf` file
