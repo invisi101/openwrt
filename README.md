@@ -1,6 +1,8 @@
 # OpenWrt Travel Router Setup Guide
 ## OpenWrt 25.12.2 · WireGuard · ProtonVPN · Travelmate
 
+> These instructions were written and tested on a GL-iNet Beryl AX (MT3000) running OpenWrt 25.12.2. They should work on any OpenWrt router with two WiFi radios.
+
 ### What This Does
 
 Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or ethernet) as its upstream WAN connection, and broadcasts your own private WiFi for your devices. All traffic is routed through ProtonVPN via WireGuard. Your devices are firewalled and NAT'd behind the router.
