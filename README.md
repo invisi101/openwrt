@@ -21,7 +21,7 @@ This guide assumes OpenWrt is already installed on your router. If you haven't d
 You will need:
 - An ethernet cable
 - A computer with an ethernet port (or USB-ethernet adapter)
-- A ProtonVPN WireGuard config file — see Step 13
+- A ProtonVPN account (you'll generate the WireGuard config file in Step 13)
 
 ---
 
@@ -42,6 +42,8 @@ On your computer, set the ethernet interface to a **manual/static IP**:
 > **Why manual?** The router's WiFi radios are disabled on a fresh OpenWrt install, so it cannot serve DHCP reliably over ethernet until configured. Manual IP guarantees you can reach it.
 
 **On Mac:** System Settings → Network → your ethernet interface → Details → TCP/IP → Configure IPv4: Manually
+
+**On Windows:** Settings → Network & Internet → your ethernet adapter → Edit → Manual → enter the values above
 
 ### Step 2 — Set root password
 
@@ -67,7 +69,7 @@ Run each of the following commands in order. All commands must be run as root vi
 
 ### Step 4 — Change LAN IP
 
-This avoids conflicts with hotel networks which commonly use 192.168.1.x.
+This avoids IP conflicts with common router defaults and hotel networks, which typically use 192.168.1.x.
 
 ```bash
 uci set network.lan.ipaddr='10.20.30.1/24'
@@ -195,6 +197,8 @@ Go to **System → Software** in LuCI (`https://10.20.30.1`):
 3. Install: `luci-proto-wireguard`
 4. Reboot
 
+Once the router reboots, reconnect to LuCI at `https://10.20.30.1` and continue.
+
 ### Step 15 — Create the WireGuard interface
 
 Go to **Network → Interfaces → Add new interface**:
@@ -269,6 +273,8 @@ Go to **System → Software** in LuCI:
 3. Search for and install: `luci-app-travelmate`
 4. Reboot the router when prompted
 
+Once the router reboots, reconnect to LuCI at `https://10.20.30.1` and continue.
+
 ### Step 22 — Run the Interface Wizard
 
 Go to **Services → Travelmate**
@@ -313,13 +319,11 @@ Click **Save & Restart**.
 
 ### Step 25 — Enable Travelmate autostart
 
-Via SSH:
+The "Enabled" checkbox in Step 24 controls whether Travelmate is active, but does not make it start automatically on boot. Run this via SSH to enable autostart:
 
 ```bash
 /etc/init.d/travelmate enable
 ```
-
-This ensures Travelmate starts automatically on every boot.
 
 ### Step 26 — Add your first upstream WiFi network
 
