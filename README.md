@@ -16,6 +16,8 @@ Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or eth
 
 ## Before You Start
 
+This guide assumes OpenWrt is already installed on your router. If you haven't done that yet, see the [OpenWrt factory installation guide](https://openwrt.org/docs/guide-quick-start/factory_installation) first.
+
 You will need:
 - An ethernet cable
 - A computer with an ethernet port (or USB-ethernet adapter)
