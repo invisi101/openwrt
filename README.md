@@ -276,7 +276,9 @@ This makes wg0 (VPN) the preferred default route (lower metric = higher priority
 
 ### Step 19 — Set DNS servers *(browser)*
 
-Go to **Network → Interfaces → Edit wwan → Advanced Settings tab**:
+> **Note:** Do this step on **both** `wwan` and `trm_wwan` if Travelmate is already installed, or on `wwan` now and repeat on `trm_wwan` after Step 22. Once Travelmate is running, `trm_wwan` is the active upstream interface — DNS settings on `wwan` alone will have no effect.
+
+Go to **Network → Interfaces → Edit trm_wwan** (or `wwan` if Travelmate is not yet installed) **→ Advanced Settings tab**:
 
 - Uncheck **Use DNS servers advertised by peer**
 - Add DNS servers:
@@ -408,7 +410,16 @@ Next time you visit the same hotel, Travelmate connects automatically with no in
 
 **If the hotel has ethernet instead of WiFi:** Plug the cable into the router's WAN port. No configuration needed.
 
-**If there's a captive portal (hotel login page):** Open `http://neverssl.com` in a browser — you'll be redirected to the hotel login page.
+**If there's a captive portal (hotel login page):** Your WireGuard VPN will block the portal from loading. Follow these steps:
+
+1. **Stop the VPN** — Network → Interfaces → **wg0** → Stop
+2. **Switch to hotel DNS** — Network → Interfaces → **trm_wwan** → Edit → Advanced Settings → check **"Use DNS servers advertised by peer"** → Save & Apply
+3. **Find the gateway IP** — check Services → Travelmate → **Station Subnet** (e.g. `10.0.0.0` → gateway is `10.0.0.1`)
+4. **Open the portal** — go to `http://10.0.0.1` (or your gateway IP) in a browser and log in
+5. **Restore DNS** — Network → Interfaces → **trm_wwan** → Edit → Advanced Settings → uncheck **"Use DNS servers advertised by peer"** → Save & Apply
+6. **Start the VPN** — Network → Interfaces → **wg0** → Start
+
+If the gateway IP doesn't show a login page, try `http://neverssl.com` or `http://captive.apple.com`.
 
 ---
 
