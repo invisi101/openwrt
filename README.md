@@ -18,24 +18,17 @@ flowchart TD
     subgraph router["GL-MT3000 · 10.20.30.1"]
         ap["radio1 — 5 GHz AP\nSSID: OpenWrtravel"]
         wg["wg0 — WireGuard\nEncrypts all traffic"]
-        wan["trm_wwan\nHotel upstream"]
+        exit["trm_wwan — hotel WiFi 2.4 GHz\nor WAN port — hotel ethernet"]
     end
 
-    subgraph hotel["Hotel / Venue — upstream carrier only"]
-        hw[Hotel WiFi AP]
-        he[Hotel Ethernet]
-    end
-
-    vpn[ProtonVPN Server]
+    vpn["ProtonVPN Server"]
     internet((Internet))
 
     devices -->|"5 GHz WiFi · IP 10.20.30.x"| ap
-    ap -->|"All traffic"| wg
-    wg -->|"Encrypted WireGuard tunnel\nHotel sees only encrypted packets"| vpn
-    vpn -->|"Traffic exits with ProtonVPN IP"| internet
-    hw -->|"2.4 GHz via Travelmate"| wan
-    he -->|"Ethernet cable"| wan
-    wan -->|"Raw internet path"| wg
+    ap -->|"Your traffic"| wg
+    wg -->|"Encrypted packets sent out"| exit
+    exit -->|"Travels through hotel network\nHotel sees only encrypted data"| vpn
+    vpn -->|"Decrypted & forwarded\nwith ProtonVPN IP"| internet
 ```
 
 ### What This Does
