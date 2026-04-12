@@ -8,7 +8,7 @@
 ### End State
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph devices["Your Devices"]
         d1[Laptop]
         d2[Phone]
@@ -16,27 +16,26 @@ flowchart LR
     end
 
     subgraph router["GL-MT3000 · 10.20.30.1"]
-        direction LR
-        lan["radio1 — 5 GHz AP\nSSID: OpenWrtravel\nYour devices connect here"]
-        wg["wg0 — WireGuard\nAll traffic is encrypted\nhere before leaving router"]
-        wan["trm_wwan — radio0 2.4 GHz\nor WAN port ethernet\nHotel internet enters here"]
+        ap["radio1 — 5 GHz AP\nSSID: OpenWrtravel"]
+        wg["wg0 — WireGuard\nEncrypts all traffic"]
+        wan["trm_wwan\nHotel upstream"]
     end
 
-    subgraph hotel["Hotel / Venue\nUpstream carrier — provides raw internet only"]
+    subgraph hotel["Hotel / Venue — upstream carrier only"]
         hw[Hotel WiFi AP]
         he[Hotel Ethernet]
     end
 
-    vpn["ProtonVPN Server\nDecrypts tunnel\nand forwards traffic"]
+    vpn[ProtonVPN Server]
     internet((Internet))
 
-    devices -->|"5 GHz WiFi\nIP: 10.20.30.x"| lan
-    lan -->|"All your traffic\npassed to VPN tunnel"| wg
-    wg -->|"Encrypted WireGuard packets\nHotel can only see this —\nnot your actual traffic"| vpn
-    vpn -->|"Traffic exits with\nProtonVPN IP address"| internet
-    hw -->|"2.4 GHz\nmanaged by Travelmate"| wan
+    devices -->|"5 GHz WiFi · IP 10.20.30.x"| ap
+    ap -->|"All traffic"| wg
+    wg -->|"Encrypted WireGuard tunnel\nHotel sees only encrypted packets"| vpn
+    vpn -->|"Traffic exits with ProtonVPN IP"| internet
+    hw -->|"2.4 GHz via Travelmate"| wan
     he -->|"Ethernet cable"| wan
-    wan -->|"Raw internet path\n(just the carrier)"| wg
+    wan -->|"Raw internet path"| wg
 ```
 
 ### What This Does
