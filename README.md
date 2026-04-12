@@ -8,36 +8,35 @@
 ### End State
 
 ```mermaid
-flowchart TD
-    subgraph your_devices["Your Devices"]
-        laptop[Laptop]
-        phone[Phone]
-        other[Any device]
+flowchart LR
+    subgraph devices["Your Devices"]
+        d1[Laptop]
+        d2[Phone]
+        d3[Any device]
     end
 
     subgraph router["GL-MT3000 · 10.20.30.1"]
-        ap["radio1 — 5 GHz AP\nSSID: OpenWrtravel · WPA2"]
-        wg["wg0 — WireGuard interface\nAll traffic routed here\nmetric 10 — highest priority"]
-        upstream["radio0 — 2.4 GHz client\ntrm_wwan · managed by Travelmate\nConnects to hotel WiFi upstream"]
-        wan["WAN port — Ethernet\nAlternative upstream if cable available"]
+        direction LR
+        lan["radio1 — 5 GHz AP\nSSID: OpenWrtravel\nYour devices connect here"]
+        wg["wg0 — WireGuard\nAll traffic is encrypted\nhere before leaving router"]
+        wan["trm_wwan — radio0 2.4 GHz\nor WAN port ethernet\nHotel internet enters here"]
     end
 
-    subgraph hotel["Hotel / Venue Network"]
-        hotelwifi[Hotel WiFi AP]
-        hoteleth[Hotel Ethernet port]
+    subgraph hotel["Hotel / Venue\nUpstream carrier — provides raw internet only"]
+        hw[Hotel WiFi AP]
+        he[Hotel Ethernet]
     end
 
-    vpn["ProtonVPN Server\nWireGuard endpoint"]
+    vpn["ProtonVPN Server\nDecrypts tunnel\nand forwards traffic"]
     internet((Internet))
 
-    laptop & phone & other -->|"Connect to private WiFi\n5 GHz · gets IP 10.20.30.x"| ap
-    ap -->|"All traffic forwarded\nto VPN tunnel"| wg
-    upstream -->|"Hotel WiFi provides\nupstream internet"| wg
-    wan -->|"Hotel ethernet provides\nupstream internet"| wg
-    wg -->|"Encrypted WireGuard tunnel\nHides all traffic from hotel network"| vpn
-    vpn -->|"Traffic exits here\nwith ProtonVPN IP"| internet
-    hotelwifi -->|"2.4 GHz connection\nmanaged by Travelmate"| upstream
-    hoteleth -->|"Ethernet cable\ninto WAN port"| wan
+    devices -->|"5 GHz WiFi\nIP: 10.20.30.x"| lan
+    lan -->|"All your traffic\npassed to VPN tunnel"| wg
+    wg -->|"Encrypted WireGuard packets\nHotel can only see this —\nnot your actual traffic"| vpn
+    vpn -->|"Traffic exits with\nProtonVPN IP address"| internet
+    hw -->|"2.4 GHz\nmanaged by Travelmate"| wan
+    he -->|"Ethernet cable"| wan
+    wan -->|"Raw internet path\n(just the carrier)"| wg
 ```
 
 ### What This Does
