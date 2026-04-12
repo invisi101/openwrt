@@ -5,6 +5,41 @@
 >
 > **Radio assignment varies by device.** This guide uses radio0 as 2.4 GHz and radio1 as 5 GHz — correct for the MT3000, but some routers reverse this. Before Step 7, verify yours with `uci show wireless | grep -E 'radio[0-9]\.band'`. If they are reversed, swap every mention of radio0 and radio1 in this guide.
 
+### End State
+
+```mermaid
+flowchart TD
+    subgraph your_devices["Your Devices"]
+        laptop[Laptop]
+        phone[Phone]
+        other[Any device]
+    end
+
+    subgraph router["GL-MT3000 · 10.20.30.1"]
+        ap["radio1 — 5 GHz AP\nSSID: OpenWrtravel · WPA2"]
+        wg["wg0 — WireGuard interface\nAll traffic routed here\nmetric 10 — highest priority"]
+        upstream["radio0 — 2.4 GHz client\ntrm_wwan · managed by Travelmate\nConnects to hotel WiFi upstream"]
+        wan["WAN port — Ethernet\nAlternative upstream if cable available"]
+    end
+
+    subgraph hotel["Hotel / Venue Network"]
+        hotelwifi[Hotel WiFi AP]
+        hoteleth[Hotel Ethernet port]
+    end
+
+    vpn["ProtonVPN Server\nWireGuard endpoint"]
+    internet((Internet))
+
+    laptop & phone & other -->|"Connect to private WiFi\n5 GHz · gets IP 10.20.30.x"| ap
+    ap -->|"All traffic forwarded\nto VPN tunnel"| wg
+    upstream -->|"Hotel WiFi provides\nupstream internet"| wg
+    wan -->|"Hotel ethernet provides\nupstream internet"| wg
+    wg -->|"Encrypted WireGuard tunnel\nHides all traffic from hotel network"| vpn
+    vpn -->|"Traffic exits here\nwith ProtonVPN IP"| internet
+    hotelwifi -->|"2.4 GHz connection\nmanaged by Travelmate"| upstream
+    hoteleth -->|"Ethernet cable\ninto WAN port"| wan
+```
+
 ### What This Does
 
 Turns any OpenWrt router into a travel router. It connects to hotel WiFi (or ethernet) as its upstream WAN connection, and broadcasts your own private WiFi for your devices. All traffic is routed through ProtonVPN via WireGuard. Your devices are firewalled and NAT'd behind the router.
