@@ -7,28 +7,34 @@
 
 ### End State
 
+**Solid arrows** = your request outbound. **Dashed arrows** = response returning.
+
 ```mermaid
 flowchart TD
     subgraph devices["Your Devices"]
-        d1[Laptop]
-        d2[Phone]
-        d3[Any device]
+        dev[Laptop · Phone · Any device]
     end
 
     subgraph router["GL-MT3000 · 10.20.30.1"]
-        ap["radio1 — 5 GHz AP\nSSID: OpenWrtravel"]
-        wg["wg0 — WireGuard\nEncrypts all traffic"]
-        exit["trm_wwan — hotel WiFi 2.4 GHz\nor WAN port — hotel ethernet"]
+        ap["radio1 — 5 GHz AP\nOpenWrtravel"]
+        wg["wg0 — WireGuard"]
+        exit["trm_wwan or WAN port\nHotel connection"]
     end
 
-    vpn["ProtonVPN Server"]
+    vpn[ProtonVPN Server]
     internet((Internet))
 
-    devices -->|"5 GHz WiFi · IP 10.20.30.x"| ap
-    ap -->|"Your traffic"| wg
-    wg -->|"Encrypted packets sent out"| exit
-    exit -->|"Travels through hotel network\nHotel sees only encrypted data"| vpn
-    vpn -->|"Decrypted & forwarded\nwith ProtonVPN IP"| internet
+    dev -->|"① Request sent over 5 GHz WiFi"| ap
+    ap -->|"② Routed into VPN tunnel"| wg
+    wg -->|"③ Encrypted & sent out"| exit
+    exit -->|"④ Travels through hotel network\nhotel sees only encrypted data"| vpn
+    vpn -->|"⑤ Decrypted & forwarded\nwith ProtonVPN IP"| internet
+
+    internet -.->|"⑥ Response arrives at ProtonVPN"| vpn
+    vpn -.->|"⑦ Encrypted & sent back"| exit
+    exit -.->|"⑧ Travels back through hotel\nstill encrypted"| wg
+    wg -.->|"⑨ Decrypted"| ap
+    ap -.->|"⑩ Delivered to your device"| dev
 ```
 
 ### What This Does
@@ -99,6 +105,18 @@ On your computer, set the ethernet interface to a **manual/static IP**:
 **On Windows:** Settings → Network & Internet → your ethernet adapter → Edit → Manual → enter the values above
 
 **On Linux (NetworkManager):** `nmcli con mod "Wired connection 1" ipv4.method manual ipv4.addresses 192.168.1.2/24 ipv4.gateway 192.168.1.1 && nmcli con up "Wired connection 1"` — replace `"Wired connection 1"` with your actual connection name (`nmcli con show` to list them)
+
+**On Linux (systemd-networkd / iwd / no NetworkManager):** Use `ip` directly — this works on any Linux regardless of which network manager is running:
+```bash
+# Find your ethernet interface name (look for something like eth0, enp3s0, enp0s31f6)
+ip link show
+
+# Replace enp3s0 with your interface name
+sudo ip addr add 192.168.1.2/24 dev enp3s0
+sudo ip link set enp3s0 up
+sudo ip route add 192.168.1.1 dev enp3s0
+```
+These are temporary — they clear on reboot, which is fine for initial setup.
 
 ### Step 2 — Set root password *(browser)*
 
