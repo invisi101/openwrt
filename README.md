@@ -424,6 +424,8 @@ Go to **Services → Travelmate → Wireless Stations**:
 
 Wait 30–60 seconds. The status on the Overview tab should show `connected, net ok`.
 
+> **At this point everything may just work.  Open a site online to check.  However if you aren't to lucky, please read on...
+
 > **Captive portal?** If the network requires a browser login (common in hotels), see the captive portal note in the **Ongoing Use** section below.
 
 > **Encryption tip:**
